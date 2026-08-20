@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyBlog - Register</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<header>
+    <nav class="navbar">
+        <h2 class="logo">MyBlog</h2>
+
+        <div class="nav-links">
+            <a href="index.htm">Home</a>
+            <a href="login.htm">Login</a>
+            <a href="register.htm">Register</a>
+            <a href="dashboard.htm">Dashboard</a>
+        </div>
+    </nav>
+</header>
+
+<main class="form-container">
+
+    <div class="form-box">
+
+        <h1>Create Account</h1>
+        <p>Join MyBlog and share your ideas.</p>
+
+        <form id="registerForm">
+
+            <label for="name">Full Name</label>
+
+            <input
+                type="text"
+                id="name"
+                placeholder="Enter your name"
+                required
+            >
+
+            <label for="email">Email</label>
+
+            <input
+                type="email"
+                id="email"
+                placeholder="Enter your email"
+                required
+            >
+
+            <label for="password">Password</label>
+
+            <input
+                type="password"
+                id="password"
+                placeholder="Create a password"
+                required
+            >
+
+            <label for="confirmPassword">Confirm Password</label>
+
+            <input
+                type="password"
+                id="confirmPassword"
+                placeholder="Confirm your password"
+                required
+            >
+
+            <button type="submit">Register</button>
+
+        </form>
+
+        <p class="form-link">
+            Already have an account?
+            <a href="login.htm">Login here</a>
+        </p>
+
+    </div>
+
+</main>
+
+<footer>
+    <p>© 2026 MyBlog. All Rights Reserved.</p>
+</footer>
+
+<script src="js/script.js"></script>
+
+</body>
+</html>
