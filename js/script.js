@@ -18,12 +18,81 @@ function showSuccessPopup(message, redirectUrl) {
     });
 }
 
+const API_URL = "http://localhost:5000/api";
+
+function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "'": "&#39;",
+        '"': "&quot;"
+    }[character]));
+}
+
+async function loadBlogs() {
+    const blogContainer = document.querySelector(".blog-container");
+    const dashboardBlogs = document.querySelector(".dashboard-blogs");
+
+    if (!blogContainer && !dashboardBlogs) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/blogs`);
+        if (!response.ok) {
+            throw new Error("Could not load blogs");
+        }
+
+        const blogs = await response.json();
+
+        if (blogContainer) {
+            blogContainer.innerHTML = blogs.length
+                ? blogs.map(blog => `
+                    <div class="blog-card">
+                        <h3>${escapeHtml(blog.title)}</h3>
+                        <p>${escapeHtml(blog.content)}</p>
+                        <a href="#">Read More</a>
+                    </div>
+                `).join("")
+                : "<p>No blogs published yet.</p>";
+        }
+
+        if (dashboardBlogs) {
+            const list = dashboardBlogs.querySelector(".dashboard-blog-list");
+            const total = document.querySelector(".stat-total");
+            const published = document.querySelector(".stat-published");
+
+            list.innerHTML = blogs.length
+                ? blogs.map(blog => `
+                    <div class="dashboard-blog">
+                        <div>
+                            <h3>${escapeHtml(blog.title)}</h3>
+                            <p>Published</p>
+                        </div>
+                        <div class="blog-actions">
+                            <a href="create-blog.htm">Edit</a>
+                            <button type="button">Delete</button>
+                        </div>
+                    </div>
+                `).join("")
+                : "<p>No blogs created yet.</p>";
+
+            total.textContent = blogs.length;
+            published.textContent = blogs.length;
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 function initializeForms() {
     // Login Form
-    const loginForm = document.getElementById("loginForm");
+    // Login Form
+const loginForm = document.getElementById("loginForm");
 
-    if (loginForm) {
-        loginForm.addEventListener("submit", function (event) {
+if (loginForm) {
+    loginForm.addEventListener("submit", async function (event) {
         event.preventDefault();
 
         const email = document.getElementById("email").value;
@@ -34,62 +103,139 @@ function initializeForms() {
             return;
         }
 
-            showSuccessPopup("Login successful!", "dashboard.html");
-        });
-    }
+        try {
+            const response = await fetch(`${API_URL}/login`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.message);
+                return;
+            }
+
+            alert(data.message);
+
+            window.location.href = "dashboard.htm";
+
+        } catch (error) {
+            alert("Unable to connect to the backend server.");
+            console.error(error);
+        }
+    });
+}
+
 
 
     // Register Form
-    const registerForm = document.getElementById("registerForm");
+   // Register Form
+const registerForm = document.getElementById("registerForm");
 
 if (registerForm) {
-    registerForm.addEventListener("submit", function (event) {
+    registerForm.addEventListener("submit", async function (event) {
         event.preventDefault();
 
         const name = document.getElementById("name").value;
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
-        const confirmPassword =
-            document.getElementById("confirmPassword").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
 
-        if (name === "" || email === "" || password === "" || confirmPassword === "") {
-            alert("Please fill in all fields.");
-            return;
-        }
-
+        // Check passwords
         if (password !== confirmPassword) {
             alert("Passwords do not match.");
             return;
         }
 
-            showSuccessPopup("Registration successful!", "login.html");
-        });
-    }
+        try {
+            const response = await fetch(`${API_URL}/register`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    password: password
+                })
+            });
 
+            const data = await response.json();
 
-    // Create Blog Form
+            if (!response.ok) {
+                alert(data.message);
+                return;
+            }
+
+            alert(data.message);
+
+            // Go to login page
+            window.location.href = "login.htm";
+
+        } catch (error) {
+            alert("Unable to connect to the backend server.");
+            console.error(error);
+        }
+    });
+}
+       // Create Blog Form
     const blogForm = document.getElementById("blogForm");
 
-if (blogForm) {
-    blogForm.addEventListener("submit", function (event) {
-        event.preventDefault();
+    if (blogForm) {
+        blogForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
 
-        const title = document.getElementById("blogTitle").value;
-        const category = document.getElementById("category").value;
-        const content = document.getElementById("content").value;
+            const title = document.getElementById("blogTitle").value;
+            const category = document.getElementById("category").value;
+            const content = document.getElementById("content").value;
+            const image = document.getElementById("image").value;
 
-        if (title === "" || category === "" || content === "") {
-            alert("Please fill in all required fields.");
-            return;
-        }
+            if (title === "" || category === "" || content === "") {
+                alert("Please fill in all fields.");
+                return;
+            }
 
-            showSuccessPopup("Blog published successfully!", "dashboard.html");
+            try {
+                const response = await fetch(`${API_URL}/blogs`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        category: category,
+                        content: content,
+                        image: image
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccessPopup(
+                        "Blog created successfully!",
+                        "dashboard.htm"
+                    );
+                } else {
+                    alert(data.message || "Failed to create blog.");
+                }
+
+            } catch (error) {
+                alert("Unable to connect to the backend server.");
+                console.error(error);
+            }
         });
     }
 }
 
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initializeForms, { once: true });
-} else {
+document.addEventListener("DOMContentLoaded", function () {
     initializeForms();
-}
+    loadBlogs();
+});
