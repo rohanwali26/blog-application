@@ -1,15 +1,15 @@
 # Blog Application
 
-A simple full-stack blog application developed as part of my virtual internship.
+A simple full-stack Blog Application built using HTML, CSS, JavaScript, Node.js, and Express.js.
 
 ## Features
 
 - User registration
 - User login
-- Dashboard
 - Create blog posts
-- Display created blogs
-- Backend API integration
+- Dashboard for viewing blogs
+- Backend REST APIs
+- Responsive and simple user interface
 
 ## Technologies Used
 
@@ -18,12 +18,23 @@ A simple full-stack blog application developed as part of my virtual internship.
 - JavaScript
 - Node.js
 - Express.js
+- Git & GitHub
 
-## How to Run
+## Project Structure
 
-1. Open the project in VS Code.
-2. Open the terminal.
-3. Go to the backend folder:
-
-```bash
-cd backend
+```text
+blog-application/
+├── backend/
+│   ├── package-lock.json
+│   ├── package.json
+│   └── server.js
+├── css/
+├── js/
+├── create-blog.htm
+├── dashboard.htm
+├── index.htm
+├── login.htm
+├── register.htm
+├── README.md
+├── .gitignore
+└── LICENSE
