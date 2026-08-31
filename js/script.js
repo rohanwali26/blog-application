@@ -52,7 +52,7 @@ async function loadBlogs() {
                     <div class="blog-card">
                         <h3>${escapeHtml(blog.title)}</h3>
                         <p>${escapeHtml(blog.content)}</p>
-                        <a href="#">Read More</a>
+                        <a href="blog-details.htm?id=${blog._id}">Read More</a>
                     </div>
                 `).join("")
                 : "<p>No blogs published yet.</p>";
@@ -71,7 +71,8 @@ async function loadBlogs() {
                             <p>Published</p>
                         </div>
                         <div class="blog-actions">
-                            <a href="create-blog.htm">Edit</a>
+                         <a href="blog-details.htm?id=${blog._id}">Read More</a>
+                        <a href="create-blog.htm">Edit</a>
                             <button type="button">Delete</button>
                         </div>
                     </div>
@@ -123,6 +124,9 @@ if (loginForm) {
             }
 
             alert(data.message);
+
+            localStorage.setItem("userName", data.user.name);
+            localStorage.setItem("userEmail", data.user.email);
 
             window.location.href = "dashboard.htm";
 
@@ -212,7 +216,8 @@ if (registerForm) {
                         title: title,
                         category: category,
                         content: content,
-                        image: image
+                        image: image,
+                        author: localStorage.getItem("userName") || "Anonymous"
                     })
                 });
 

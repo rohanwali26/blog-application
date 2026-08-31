@@ -1,14 +1,31 @@
 const express = require("express");
 const cors = require("cors");
+const mongoose = require("mongoose");
+require("dotenv").config();
+
+const User = require("./models/User");
+const Blog = require("./models/Blog");
 
 const app = express();
+
 const PORT = 5000;
+const mongoUri = process.env.MONGODB_URI;
+
+if (!mongoUri || mongoUri.includes("<db_password>")) {
+    throw new Error("Set the real MongoDB password in backend/.env as MONGODB_URI.");
+}
 
 app.use(cors());
 app.use(express.json());
 
+mongoose.connect(mongoUri)
+    .then(() => {
+        console.log("MongoDB connected successfully!");
+    })
+    .catch((error) => {
+        console.error("MongoDB connection failed:", error);
+    });
 // Temporary storage
-const users = [];
 const blogs = [];
 
 // Test route
@@ -17,7 +34,7 @@ app.get("/", (req, res) => {
 });
 
 // Register
-app.post("/api/register", (req, res) => {
+app.post("/api/register", async (req, res) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
@@ -26,35 +43,39 @@ app.post("/api/register", (req, res) => {
         });
     }
 
-    const existingUser = users.find(user => user.email === email);
+    try {
+        const existingUser = await User.findOne({ email });
 
-    if (existingUser) {
-        return res.status(400).json({
-            message: "Email already registered."
+        if (existingUser) {
+            return res.status(400).json({
+                message: "Email already registered."
+            });
+        }
+
+        const newUser = await User.create({
+            name,
+            email,
+            password
+        });
+
+        res.status(201).json({
+            message: "Registration successful!",
+            user: {
+                id: newUser._id,
+                name: newUser.name,
+                email: newUser.email
+            }
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Server error."
         });
     }
-
-    const newUser = {
-        id: users.length + 1,
-        name,
-        email,
-        password
-    };
-
-    users.push(newUser);
-
-    res.status(201).json({
-        message: "Registration successful!",
-        user: {
-            id: newUser.id,
-            name: newUser.name,
-            email: newUser.email
-        }
-    });
 });
-
 // Login
-app.post("/api/login", (req, res) => {
+app.post("/api/login", async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -63,55 +84,98 @@ app.post("/api/login", (req, res) => {
         });
     }
 
-    const user = users.find(
-        user => user.email === email && user.password === password
-    );
+    try {
+        const user = await User.findOne({ email, password });
 
-    if (!user) {
-        return res.status(401).json({
-            message: "Invalid email or password."
+        if (!user) {
+            return res.status(401).json({
+                message: "Invalid email or password."
+            });
+        }
+
+        res.json({
+            message: "Login successful!",
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email
+            }
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Server error."
         });
     }
-
-    res.json({
-        message: "Login successful!",
-        user: {
-            id: user.id,
-            name: user.name,
-            email: user.email
-        }
-    });
 });
-
 // Create Blog
-app.post("/api/blogs", (req, res) => {
-    const { title, category, content, image } = req.body;
+app.post("/api/blogs", async (req, res) => {
+    const { title, category, content, author } = req.body;
 
-    if (!title || !category || !content) {
+    if (!title || !category || !content || !author) {
         return res.status(400).json({
             message: "Please fill in all blog fields."
         });
     }
 
-    const newBlog = {
-        id: blogs.length + 1,
-        title,
-        category,
-        content,
-        image: image || ""
-    };
+    try {
+        const newBlog = await Blog.create({
+            title,
+            category,
+            content,
+            author
+        });
 
-    blogs.push(newBlog);
+        res.status(201).json({
+            message: "Blog created successfully!",
+            blog: newBlog
+        });
 
-    res.status(201).json({
-        message: "Blog created successfully!",
-        blog: newBlog
-    });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Server error."
+        });
+    }
 });
+// Get all blogs
+app.get("/api/blogs", async (req, res) => {
+    try {
+        const blogs = await Blog.find().sort({ createdAt: -1 });
 
+        res.json(blogs);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Unable to retrieve blogs."
+        });
+    }
+});
 // List Blogs
 app.get("/api/blogs", (req, res) => {
     res.json(blogs);
+});
+
+// Get a single blog by ID
+app.get("/api/blogs/:id", async (req, res) => {
+    try {
+        const blog = await Blog.findById(req.params.id);
+
+        if (!blog) {
+            return res.status(404).json({
+                message: "Blog not found."
+            });
+        }
+
+        res.json(blog);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Unable to retrieve blog."
+        });
+    }
 });
 
 // Start server
