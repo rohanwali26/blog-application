@@ -51,6 +51,7 @@ async function loadBlogs() {
                 ? blogs.map(blog => `
                     <div class="blog-card">
                         <h3>${escapeHtml(blog.title)}</h3>
+                         <p class="blog-category">${escapeHtml(blog.category)}</p>
                         <p>${escapeHtml(blog.content)}</p>
                         <a href="blog-details.htm?id=${blog._id}">Read More</a>
                     </div>
@@ -298,7 +299,46 @@ async function deleteBlog(blogId) {
         alert("Unable to connect to the backend server.");
     }
 }
+
+function setupBlogFilters() {
+    const searchInput = document.getElementById("searchBlog");
+    const categoryFilter = document.getElementById("categoryFilter");
+
+    if (!searchInput || !categoryFilter) {
+        return;
+    }
+
+    function filterBlogs() {
+        const searchText = searchInput.value.toLowerCase().trim();
+        const selectedCategory = categoryFilter.value.toLowerCase();
+
+        const blogCards = document.querySelectorAll(".blog-card");
+
+        blogCards.forEach(card => {
+            const title = card.querySelector("h3").textContent.toLowerCase();
+            const paragraphs = card.querySelectorAll("p");
+
+            const category = paragraphs[0].textContent.toLowerCase();
+            const content = paragraphs[1].textContent.toLowerCase();
+
+            const matchesSearch =
+                title.includes(searchText) ||
+                content.includes(searchText);
+
+            const matchesCategory =
+                selectedCategory === "" ||
+                category === selectedCategory;
+
+            card.style.display =
+                matchesSearch && matchesCategory ? "" : "none";
+        });
+    }
+
+    searchInput.addEventListener("input", filterBlogs);
+    categoryFilter.addEventListener("change", filterBlogs);
+}
 document.addEventListener("DOMContentLoaded", function () {
     initializeForms();
     loadBlogs();
+    setupBlogFilters();
 });
