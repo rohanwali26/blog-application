@@ -178,6 +178,63 @@ app.get("/api/blogs/:id", async (req, res) => {
     }
 });
 
+// Update a blog
+app.put("/api/blogs/:id", async (req, res) => {
+    const { title, category, content, author } = req.body;
+
+    try {
+        const updatedBlog = await Blog.findByIdAndUpdate(
+            req.params.id,
+            {
+                title,
+                category,
+                content,
+                author
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedBlog) {
+            return res.status(404).json({
+                message: "Blog not found."
+            });
+        }
+
+        res.json({
+            message: "Blog updated successfully!",
+            blog: updatedBlog
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Unable to update blog."
+        });
+    }
+});
+
+// Delete a blog
+app.delete("/api/blogs/:id", async (req, res) => {
+    try {
+        const deletedBlog = await Blog.findByIdAndDelete(req.params.id);
+
+        if (!deletedBlog) {
+            return res.status(404).json({
+                message: "Blog not found."
+            });
+        }
+
+        res.json({
+            message: "Blog deleted successfully!"
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Unable to delete blog."
+        });
+    }
+});
 // Start server
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);

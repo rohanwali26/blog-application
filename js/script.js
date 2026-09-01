@@ -72,8 +72,8 @@ async function loadBlogs() {
                         </div>
                         <div class="blog-actions">
                          <a href="blog-details.htm?id=${blog._id}">Read More</a>
-                        <a href="create-blog.htm">Edit</a>
-                            <button type="button">Delete</button>
+                         <a href="create-blog.htm?id=${blog._id}">Edit</a>
+                         <button type="button" onclick="deleteBlog('${blog._id}')">Delete</button>
                         </div>
                     </div>
                 `).join("")
@@ -189,57 +189,115 @@ if (registerForm) {
         }
     });
 }
-       // Create Blog Form
-    const blogForm = document.getElementById("blogForm");
+       // Create / Edit Blog Form
+const blogForm = document.getElementById("blogForm");
 
-    if (blogForm) {
-        blogForm.addEventListener("submit", async function (event) {
-            event.preventDefault();
+if (blogForm) {
+    const params = new URLSearchParams(window.location.search);
+    const blogId = params.get("id");
 
-            const title = document.getElementById("blogTitle").value;
-            const category = document.getElementById("category").value;
-            const content = document.getElementById("content").value;
-            const image = document.getElementById("image").value;
+    // If editing an existing blog
+    if (blogId) {
+        document.querySelector(".create-blog-box h1").textContent = "Edit Blog";
+        document.querySelector(".publish-btn").textContent = "Update Blog";
 
-            if (title === "" || category === "" || content === "") {
-                alert("Please fill in all fields.");
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/blogs`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        title: title,
-                        category: category,
-                        content: content,
-                        image: image,
-                        author: localStorage.getItem("userName") || "Anonymous"
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    showSuccessPopup(
-                        "Blog created successfully!",
-                        "dashboard.htm"
-                    );
-                } else {
-                    alert(data.message || "Failed to create blog.");
+        fetch(`${API_URL}/blogs/${blogId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Could not load blog");
                 }
-
-            } catch (error) {
-                alert("Unable to connect to the backend server.");
+                return response.json();
+            })
+            .then(blog => {
+                document.getElementById("blogTitle").value = blog.title;
+                document.getElementById("category").value = blog.category;
+                document.getElementById("content").value = blog.content;
+                document.getElementById("image").value = blog.image || "";
+            })
+            .catch(error => {
                 console.error(error);
+                alert("Unable to load blog.");
+            });
+    }
+
+    blogForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const title = document.getElementById("blogTitle").value;
+        const category = document.getElementById("category").value;
+        const content = document.getElementById("content").value;
+        const image = document.getElementById("image").value;
+
+        if (title === "" || category === "" || content === "") {
+            alert("Please fill in all fields.");
+            return;
+        }
+
+        try {
+            const url = blogId
+                ? `${API_URL}/blogs/${blogId}`
+                : `${API_URL}/blogs`;
+
+            const response = await fetch(url, {
+                method: blogId ? "PUT" : "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    title: title,
+                    category: category,
+                    content: content,
+                    image: image,
+                    author: localStorage.getItem("userName") || "Anonymous"
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showSuccessPopup(
+                    blogId
+                        ? "Blog updated successfully!"
+                        : "Blog created successfully!",
+                    "dashboard.htm"
+                );
+            } else {
+                alert(data.message || "Failed to save blog.");
             }
+
+        } catch (error) {
+            alert("Unable to connect to the backend server.");
+            console.error(error);
+        }
+    });
+}
+}
+async function deleteBlog(blogId) {
+    const confirmDelete = confirm("Are you sure you want to delete this blog?");
+
+    if (!confirmDelete) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/blogs/${blogId}`, {
+            method: "DELETE"
         });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert("Blog deleted successfully!");
+            loadBlogs();
+        } else {
+            alert(data.message || "Failed to delete blog.");
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Unable to connect to the backend server.");
     }
 }
-
 document.addEventListener("DOMContentLoaded", function () {
     initializeForms();
     loadBlogs();
