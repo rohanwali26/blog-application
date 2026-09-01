@@ -471,3 +471,61 @@ footer {
         width: 100%;
     }
 }
+/* Search and Category Filter */
+
+.blog-filters {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin: 25px auto 35px;
+    padding: 15px;
+}
+
+#searchBlog {
+    width: 350px;
+    padding: 13px 18px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    outline: none;
+    transition: 0.3s;
+    box-sizing: border-box;
+}
+
+#searchBlog:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 8px rgba(37, 99, 235, 0.2);
+}
+
+#searchBlog::placeholder {
+    color: #999;
+}
+
+#categoryFilter {
+    padding: 13px 18px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background: white;
+    cursor: pointer;
+    outline: none;
+    transition: 0.3s;
+}
+
+#categoryFilter:hover,
+#categoryFilter:focus {
+    border-color: #2563eb;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+    .blog-filters {
+        flex-direction: column;
+    }
+
+    #searchBlog,
+    #categoryFilter {
+        width: 90%;
+    }
+}
