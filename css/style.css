@@ -551,3 +551,186 @@ footer {
     font-size: 16px;
     color: #666;
 }
+/* ================================
+   MODULE 6 - RESPONSIVE DESIGN
+================================ */
+
+/* General improvement */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+/* Navbar */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 40px;
+    flex-wrap: wrap;
+}
+
+.nav-links {
+    display: flex;
+    gap: 20px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Buttons */
+.btn,
+.publish-btn,
+.draft-btn {
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn:hover,
+.publish-btn:hover,
+.draft-btn:hover {
+    transform: translateY(-2px);
+}
+
+/* Forms */
+.form-container,
+.create-blog-container {
+    width: 100%;
+    padding: 20px;
+}
+
+.form-box,
+.create-blog-box {
+    width: 100%;
+    max-width: 600px;
+    margin: auto;
+}
+
+/* Inputs */
+input,
+select,
+textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+
+/* Blog cards */
+.blog-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    padding: 20px;
+}
+
+.blog-card {
+    width: 100%;
+}
+
+/* Dashboard */
+.stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.stat-card {
+    width: 100%;
+}
+
+/* ================================
+   MOBILE RESPONSIVE
+================================ */
+
+@media (max-width: 768px) {
+
+    /* Navbar */
+    .navbar {
+        padding: 15px 20px;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .nav-links {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+
+    /* Hero */
+    .hero {
+        padding: 40px 20px;
+        text-align: center;
+    }
+
+    /* Blog cards */
+    .blog-container {
+        grid-template-columns: 1fr;
+        padding: 15px;
+    }
+
+    /* Dashboard statistics */
+    .stats {
+        grid-template-columns: 1fr;
+        padding: 15px;
+    }
+
+    /* Forms */
+    .form-box,
+    .create-blog-box {
+        padding: 20px;
+    }
+
+    /* Buttons */
+    .create-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .create-buttons button {
+        width: 100%;
+    }
+
+    /* Dashboard blogs */
+    .dashboard-blog {
+        width: 100%;
+    }
+}
+
+/* Small mobile screens */
+@media (max-width: 480px) {
+
+    .navbar {
+        padding: 12px 15px;
+    }
+
+    .logo {
+        font-size: 22px;
+    }
+
+    h1 {
+        font-size: 28px;
+    }
+
+    h2 {
+        font-size: 22px;
+    }
+
+    p {
+        font-size: 15px;
+    }
+
+    .btn,
+    .publish-btn,
+    .draft-btn {
+        width: 100%;
+        padding: 12px;
+    }
+}

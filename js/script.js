@@ -386,22 +386,60 @@ function setupBlogFilters() {
         return;
     }
 
+    function normalizeSearchText(value) {
+        return String(value)
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, " ")
+            .trim();
+    }
+
+    function isCloseMatch(searchWord, blogWords) {
+        return blogWords.some(blogWord => {
+            if (blogWord.includes(searchWord) || searchWord.includes(blogWord)) {
+                return true;
+            }
+
+            if (Math.abs(searchWord.length - blogWord.length) > 1) {
+                return false;
+            }
+
+            let previousRow = Array.from(
+                { length: blogWord.length + 1 },
+                (_, index) => index
+            );
+
+            for (let row = 1; row <= searchWord.length; row++) {
+                const currentRow = [row];
+
+                for (let column = 1; column <= blogWord.length; column++) {
+                    currentRow[column] = Math.min(
+                        currentRow[column - 1] + 1,
+                        previousRow[column] + 1,
+                        previousRow[column - 1] + (searchWord[row - 1] === blogWord[column - 1] ? 0 : 1)
+                    );
+                }
+
+                previousRow = currentRow;
+            }
+
+            return previousRow[blogWord.length] <= 1;
+        });
+    }
+
     function filterBlogs() {
-        const searchText = searchInput.value.toLowerCase().trim();
+        const searchText = normalizeSearchText(searchInput.value);
+        const searchWords = searchText.split(/\s+/).filter(Boolean);
         const selectedCategory = categoryFilter.value.toLowerCase();
 
         const blogCards = document.querySelectorAll(".blog-card");
 
         blogCards.forEach(card => {
-            const title = card.querySelector("h3").textContent.toLowerCase();
-            const paragraphs = card.querySelectorAll("p");
-
-            const category = paragraphs[0].textContent.toLowerCase();
-            const content = paragraphs[1].textContent.toLowerCase();
-
-            const matchesSearch =
-                title.includes(searchText) ||
-                content.includes(searchText);
+            const searchableText = normalizeSearchText(card.textContent);
+            const blogWords = searchableText.split(/\s+/).filter(Boolean);
+            const matchesSearch = searchWords.every(searchWord =>
+                isCloseMatch(searchWord, blogWords)
+            );
+            const category = card.querySelector(".blog-category").textContent.toLowerCase();
 
             const matchesCategory =
                 selectedCategory === "" ||

@@ -49,7 +49,6 @@ function authenticateToken(req, res, next) {
     }
 }
 
-const PORT = 5000;
 const mongoUri = process.env.MONGODB_URI;
 
 if (!mongoUri || mongoUri.includes("<db_password>")) {
@@ -358,6 +357,8 @@ app.delete("/api/blogs/:id", authenticateToken, async (req, res) => {
     }
 });
 // Start server
+const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
