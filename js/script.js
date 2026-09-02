@@ -1,4 +1,9 @@
 function showSuccessPopup(message, redirectUrl) {
+    const existingPopup = document.querySelector(".success-popup");
+    if (existingPopup) {
+        existingPopup.remove();
+    }
+
     const popup = document.createElement("div");
     popup.className = "success-popup";
     popup.setAttribute("role", "dialog");
@@ -14,8 +19,36 @@ function showSuccessPopup(message, redirectUrl) {
     document.body.appendChild(popup);
     popup.querySelector("button").focus();
     popup.querySelector("button").addEventListener("click", function () {
-        window.location.href = redirectUrl;
+        if (redirectUrl) {
+            window.location.href = redirectUrl;
+            return;
+        }
+
+        popup.remove();
     });
+}
+
+function triggerSuccessPopup(message, redirectUrl) {
+    sessionStorage.setItem("successMessage", message);
+    sessionStorage.setItem("successRedirect", redirectUrl || "");
+    if (redirectUrl) {
+        window.location.href = redirectUrl;
+    } else {
+        showSuccessPopup(message, "");
+    }
+}
+
+function displayStoredSuccessPopup() {
+    const message = sessionStorage.getItem("successMessage");
+    const redirectUrl = sessionStorage.getItem("successRedirect");
+
+    if (!message) {
+        return;
+    }
+
+    sessionStorage.removeItem("successMessage");
+    sessionStorage.removeItem("successRedirect");
+    showSuccessPopup(message, redirectUrl || "");
 }
 
 const API_URL = "http://localhost:5000/api";
@@ -33,14 +66,35 @@ function escapeHtml(value) {
 async function loadBlogs() {
     const blogContainer = document.querySelector(".blog-container");
     const dashboardBlogs = document.querySelector(".dashboard-blogs");
+    const token = localStorage.getItem("token");
 
     if (!blogContainer && !dashboardBlogs) {
         return;
     }
 
+    if (dashboardBlogs && !token) {
+        window.location.href = "login.htm";
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_URL}/blogs`);
+        const response = await fetch(
+    dashboardBlogs
+        ? `${API_URL}/my-blogs`
+        : `${API_URL}/blogs`,
+    dashboardBlogs
+        ? {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`
+            }
+        }
+        : {}
+);
         if (!response.ok) {
+            if (dashboardBlogs && (response.status === 401 || response.status === 403)) {
+                logoutUser();
+                return;
+            }
             throw new Error("Could not load blogs");
         }
 
@@ -89,190 +143,211 @@ async function loadBlogs() {
 }
 
 function initializeForms() {
-    // Login Form
-    // Login Form
-const loginForm = document.getElementById("loginForm");
+    const profileName = document.getElementById("profileName");
+    const profileEmail = document.getElementById("profileEmail");
 
-if (loginForm) {
-    loginForm.addEventListener("submit", async function (event) {
-        event.preventDefault();
-
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-
-        if (email === "" || password === "") {
-            alert("Please fill in all fields.");
-            return;
-        }
-
-        try {
-            const response = await fetch(`${API_URL}/login`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    email: email,
-                    password: password
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                alert(data.message);
-                return;
-            }
-
-            alert(data.message);
-
-            localStorage.setItem("userName", data.user.name);
-            localStorage.setItem("userEmail", data.user.email);
-
-            window.location.href = "dashboard.htm";
-
-        } catch (error) {
-            alert("Unable to connect to the backend server.");
-            console.error(error);
-        }
-    });
-}
-
-
-
-    // Register Form
-   // Register Form
-const registerForm = document.getElementById("registerForm");
-
-if (registerForm) {
-    registerForm.addEventListener("submit", async function (event) {
-        event.preventDefault();
-
-        const name = document.getElementById("name").value;
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const confirmPassword = document.getElementById("confirmPassword").value;
-
-        // Check passwords
-        if (password !== confirmPassword) {
-            alert("Passwords do not match.");
-            return;
-        }
-
-        try {
-            const response = await fetch(`${API_URL}/register`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    name: name,
-                    email: email,
-                    password: password
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                alert(data.message);
-                return;
-            }
-
-            alert(data.message);
-
-            // Go to login page
-            window.location.href = "login.htm";
-
-        } catch (error) {
-            alert("Unable to connect to the backend server.");
-            console.error(error);
-        }
-    });
-}
-       // Create / Edit Blog Form
-const blogForm = document.getElementById("blogForm");
-
-if (blogForm) {
-    const params = new URLSearchParams(window.location.search);
-    const blogId = params.get("id");
-
-    // If editing an existing blog
-    if (blogId) {
-        document.querySelector(".create-blog-box h1").textContent = "Edit Blog";
-        document.querySelector(".publish-btn").textContent = "Update Blog";
-
-        fetch(`${API_URL}/blogs/${blogId}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Could not load blog");
-                }
-                return response.json();
-            })
-            .then(blog => {
-                document.getElementById("blogTitle").value = blog.title;
-                document.getElementById("category").value = blog.category;
-                document.getElementById("content").value = blog.content;
-                document.getElementById("image").value = blog.image || "";
-            })
-            .catch(error => {
-                console.error(error);
-                alert("Unable to load blog.");
-            });
+    if (profileName) {
+        profileName.textContent = localStorage.getItem("userName") || "User";
     }
 
-    blogForm.addEventListener("submit", async function (event) {
-        event.preventDefault();
+    if (profileEmail) {
+        profileEmail.textContent = localStorage.getItem("userEmail") || "Not available";
+    }
 
-        const title = document.getElementById("blogTitle").value;
-        const category = document.getElementById("category").value;
-        const content = document.getElementById("content").value;
-        const image = document.getElementById("image").value;
+    const loginForm = document.getElementById("loginForm");
 
-        if (title === "" || category === "" || content === "") {
-            alert("Please fill in all fields.");
-            return;
-        }
+    if (loginForm) {
+        loginForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
 
-        try {
-            const url = blogId
-                ? `${API_URL}/blogs/${blogId}`
-                : `${API_URL}/blogs`;
+            const submitButton = loginForm.querySelector("button[type=\"submit\"]");
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
 
-            const response = await fetch(url, {
-                method: blogId ? "PUT" : "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    title: title,
-                    category: category,
-                    content: content,
-                    image: image,
-                    author: localStorage.getItem("userName") || "Anonymous"
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showSuccessPopup(
-                    blogId
-                        ? "Blog updated successfully!"
-                        : "Blog created successfully!",
-                    "dashboard.htm"
-                );
-            } else {
-                alert(data.message || "Failed to save blog.");
+            if (email === "" || password === "") {
+                alert("Please fill in all fields.");
+                return;
             }
 
-        } catch (error) {
-            alert("Unable to connect to the backend server.");
-            console.error(error);
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const responseText = await response.text();
+                let data;
+
+                try {
+                    data = responseText ? JSON.parse(responseText) : {};
+                } catch (parseError) {
+                    throw new Error("The server returned an invalid response.");
+                }
+
+                if (!response.ok) {
+                    alert(data.message || "Login failed.");
+                    return;
+                }
+
+                if (!data.token || !data.user) {
+                    throw new Error("The server returned incomplete login data.");
+                }
+
+                localStorage.setItem("token", data.token);
+                localStorage.setItem("userName", data.user.name);
+                localStorage.setItem("userEmail", data.user.email);
+
+                triggerSuccessPopup(data.message, "dashboard.htm");
+            } catch (error) {
+                alert(error.message || "Unable to connect to the backend server.");
+                console.error(error);
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    }
+
+    const registerForm = document.getElementById("registerForm");
+
+    if (registerForm) {
+        registerForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const name = document.getElementById("name").value;
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const confirmPassword = document.getElementById("confirmPassword").value;
+
+            if (password !== confirmPassword) {
+                alert("Passwords do not match.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert(data.message);
+                    return;
+                }
+
+                triggerSuccessPopup(data.message, "login.htm");
+            } catch (error) {
+                alert("Unable to connect to the backend server.");
+                console.error(error);
+            }
+        });
+    }
+
+    const blogForm = document.getElementById("blogForm");
+
+    if (blogForm) {
+        const params = new URLSearchParams(window.location.search);
+        const blogId = params.get("id");
+
+        if (blogId) {
+            document.querySelector(".create-blog-box h1").textContent = "Edit Blog";
+            document.querySelector(".publish-btn").textContent = "Update Blog";
+
+            fetch(`${API_URL}/blogs/${blogId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Could not load blog");
+                    }
+                    return response.json();
+                })
+                .then(blog => {
+                    document.getElementById("blogTitle").value = blog.title;
+                    document.getElementById("category").value = blog.category;
+                    document.getElementById("content").value = blog.content;
+                    document.getElementById("image").value = blog.image || "";
+                })
+                .catch(error => {
+                    console.error(error);
+                    alert("Unable to load blog.");
+                });
         }
-    });
+
+        blogForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const token = localStorage.getItem("token");
+            const title = document.getElementById("blogTitle").value;
+            const category = document.getElementById("category").value;
+            const content = document.getElementById("content").value;
+            const image = document.getElementById("image").value;
+
+            if (!token) {
+                alert("Please login before creating a blog.");
+                window.location.href = "login.htm";
+                return;
+            }
+
+            if (title === "" || category === "" || content === "") {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+            try {
+                const url = blogId
+                    ? `${API_URL}/blogs/${blogId}`
+                    : `${API_URL}/blogs`;
+
+                const response = await fetch(url, {
+                    method: blogId ? "PUT" : "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        category: category,
+                        content: content,
+                        image: image,
+                        author: localStorage.getItem("userName") || "Anonymous"
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    triggerSuccessPopup(
+                        blogId
+                            ? "Blog updated successfully!"
+                            : "Blog created successfully!",
+                        "dashboard.htm"
+                    );
+                } else {
+                    alert(data.message || "Failed to save blog.");
+                }
+            } catch (error) {
+                alert("Unable to connect to the backend server.");
+                console.error(error);
+            }
+        });
+    }
 }
-}
+
 async function deleteBlog(blogId) {
     const confirmDelete = confirm("Are you sure you want to delete this blog?");
 
@@ -282,7 +357,10 @@ async function deleteBlog(blogId) {
 
     try {
         const response = await fetch(`${API_URL}/blogs/${blogId}`, {
-            method: "DELETE"
+            method: "DELETE",
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`
+            }
         });
 
         const data = await response.json();
@@ -337,7 +415,27 @@ function setupBlogFilters() {
     searchInput.addEventListener("input", filterBlogs);
     categoryFilter.addEventListener("change", filterBlogs);
 }
+function logoutUser() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+
+    window.location.href = "login.htm";
+}
 document.addEventListener("DOMContentLoaded", function () {
+    const currentPage = window.location.pathname;
+
+    displayStoredSuccessPopup();
+
+    if (currentPage.includes("dashboard.htm")) {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            window.location.href = "login.htm";
+            return;
+        }
+    }
+
     initializeForms();
     loadBlogs();
     setupBlogFilters();

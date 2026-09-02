@@ -17,7 +17,7 @@
             <a href="index.htm">Home</a>
             <a href="dashboard.htm">Dashboard</a>
             <a href="create-blog.htm">Create Blog</a>
-            <a href="login.htm">Logout</a>
+            <a href="#" onclick="logoutUser(); return false;">Logout</a>
         </div>
     </nav>
 </header>
@@ -28,6 +28,10 @@
 
         <div>
             <h1>Dashboard</h1>
+    <div class="user-profile">
+        <h2>Welcome, <span id="profileName">User</span> 👋</h2>
+        <p>Email: <span id="profileEmail">Not available</span></p>
+</div>
             <p>Manage your blogs and view your activity.</p>
         </div>
 

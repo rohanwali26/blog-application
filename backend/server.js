@@ -1,12 +1,53 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 require("dotenv").config();
 
 const User = require("./models/User");
 const Blog = require("./models/Blog");
 
 const app = express();
+
+function normalizeEmail(email) {
+    return String(email || "").trim().toLowerCase();
+}
+
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function findUserByEmail(email) {
+    const normalizedEmail = normalizeEmail(email);
+
+    return User.findOne({
+        email: {
+            $regex: new RegExp(`^${escapeRegExp(normalizedEmail)}$`, "i")
+        }
+    });
+}
+
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) {
+        return res.status(401).json({
+            message: "Access denied. Please login."
+        });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(403).json({
+            message: "Invalid or expired token."
+        });
+    }
+}
 
 const PORT = 5000;
 const mongoUri = process.env.MONGODB_URI;
@@ -44,7 +85,8 @@ app.post("/api/register", async (req, res) => {
     }
 
     try {
-        const existingUser = await User.findOne({ email });
+        const normalizedEmail = normalizeEmail(email);
+        const existingUser = await findUserByEmail(normalizedEmail);
 
         if (existingUser) {
             return res.status(400).json({
@@ -52,10 +94,12 @@ app.post("/api/register", async (req, res) => {
             });
         }
 
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         const newUser = await User.create({
             name,
-            email,
-            password
+            email:normalizedEmail,
+            password: hashedPassword,
         });
 
         res.status(201).json({
@@ -74,6 +118,7 @@ app.post("/api/register", async (req, res) => {
         });
     }
 });
+
 // Login
 app.post("/api/login", async (req, res) => {
     const { email, password } = req.body;
@@ -85,7 +130,8 @@ app.post("/api/login", async (req, res) => {
     }
 
     try {
-        const user = await User.findOne({ email, password });
+        const normalizedEmail = normalizeEmail(email);
+        const user = await findUserByEmail(normalizedEmail);
 
         if (!user) {
             return res.status(401).json({
@@ -93,8 +139,41 @@ app.post("/api/login", async (req, res) => {
             });
         }
 
+        let passwordMatch = false;
+
+        if (user.password && typeof user.password === "string" && user.password.startsWith("$2")) {
+            passwordMatch = await bcrypt.compare(password, user.password);
+        } else {
+            passwordMatch = password === user.password;
+
+            if (passwordMatch) {
+                const hashedPassword = await bcrypt.hash(password, 10);
+                await User.findByIdAndUpdate(user._id, {
+                    password: hashedPassword
+                });
+            }
+        }
+
+        if (!passwordMatch) {
+            return res.status(401).json({
+                message: "Invalid email or password."
+            });
+        }
+
+        const token = jwt.sign(
+            {
+                userId: user._id,
+                email: user.email
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "1d"
+            }
+        );
+
         res.json({
             message: "Login successful!",
+            token,
             user: {
                 id: user._id,
                 name: user.name,
@@ -110,8 +189,9 @@ app.post("/api/login", async (req, res) => {
     }
 });
 // Create Blog
-app.post("/api/blogs", async (req, res) => {
-    const { title, category, content, author } = req.body;
+    app.post("/api/blogs", authenticateToken, async (req, res) => {
+    const { title, category, content } = req.body;
+    const author = req.user.userId;
 
     if (!title || !category || !content || !author) {
         return res.status(400).json({
@@ -139,7 +219,31 @@ app.post("/api/blogs", async (req, res) => {
         });
     }
 });
+// Get logged-in user's blogs
+app.get("/api/my-blogs", authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId).select("name");
+        const authorValues = [req.user.userId];
+
+        if (user && user.name) {
+            authorValues.push(user.name);
+        }
+
+        const blogs = await Blog.find({
+            author: { $in: authorValues }
+        }).sort({ createdAt: -1 });
+
+        res.json(blogs);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Unable to retrieve your blogs."
+        });
+    }
+});
+
 // Get all blogs
+
 app.get("/api/blogs", async (req, res) => {
     try {
         const blogs = await Blog.find().sort({ createdAt: -1 });
@@ -179,20 +283,29 @@ app.get("/api/blogs/:id", async (req, res) => {
 });
 
 // Update a blog
-app.put("/api/blogs/:id", async (req, res) => {
-    const { title, category, content, author } = req.body;
+app.put("/api/blogs/:id", authenticateToken, async (req, res) => {
+    const { title, category, content } = req.body;
 
     try {
-        const updatedBlog = await Blog.findByIdAndUpdate(
-            req.params.id,
-            {
-                title,
-                category,
-                content,
-                author
-            },
-            { new: true, runValidators: true }
-        );
+        const user = await User.findById(req.user.userId).select("name");
+        const authorValues = [String(req.user.userId)];
+
+        if (user && user.name) {
+            authorValues.push(user.name);
+        }
+
+       const updatedBlog = await Blog.findOneAndUpdate(
+    {
+        _id: req.params.id,
+        author: { $in: authorValues }
+    },
+    {
+        title,
+        category,
+        content
+    },
+    { new: true, runValidators: true }
+);
 
         if (!updatedBlog) {
             return res.status(404).json({
@@ -204,7 +317,6 @@ app.put("/api/blogs/:id", async (req, res) => {
             message: "Blog updated successfully!",
             blog: updatedBlog
         });
-
     } catch (error) {
         console.error(error);
         res.status(500).json({
@@ -214,9 +326,19 @@ app.put("/api/blogs/:id", async (req, res) => {
 });
 
 // Delete a blog
-app.delete("/api/blogs/:id", async (req, res) => {
+app.delete("/api/blogs/:id", authenticateToken, async (req, res) => {
     try {
-        const deletedBlog = await Blog.findByIdAndDelete(req.params.id);
+        const user = await User.findById(req.user.userId).select("name");
+        const authorValues = [String(req.user.userId)];
+
+        if (user && user.name) {
+            authorValues.push(user.name);
+        }
+
+        const deletedBlog = await Blog.findOneAndDelete({
+            _id: req.params.id,
+            author: { $in: authorValues }
+        });
 
         if (!deletedBlog) {
             return res.status(404).json({
