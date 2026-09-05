@@ -3,7 +3,10 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({
+    path: path.join(__dirname, ".env")
+});
 
 const User = require("./models/User");
 const Blog = require("./models/Blog");
@@ -50,9 +53,14 @@ function authenticateToken(req, res, next) {
 }
 
 const mongoUri = process.env.MONGODB_URI;
+const jwtSecret = process.env.JWT_SECRET;
 
 if (!mongoUri || mongoUri.includes("<db_password>")) {
-    throw new Error("Set the real MongoDB password in backend/.env as MONGODB_URI.");
+    throw new Error("Missing MONGODB_URI. Add it to backend/.env locally or the deployment environment variables.");
+}
+
+if (!jwtSecret || jwtSecret === "your_jwt_secret_key") {
+    throw new Error("Missing JWT_SECRET. Add a strong secret to backend/.env locally or the deployment environment variables.");
 }
 
 app.use(cors({
@@ -61,13 +69,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-mongoose.connect(mongoUri)
-    .then(() => {
-        console.log("MongoDB connected successfully!");
-    })
-    .catch((error) => {
-        console.error("MongoDB connection failed:", error);
-    });
 // Temporary storage
 const blogs = [];
 
@@ -167,7 +168,7 @@ app.post("/api/login", async (req, res) => {
                 userId: user._id,
                 email: user.email
             },
-            process.env.JWT_SECRET,
+            jwtSecret,
             {
                 expiresIn: "1d"
             }
@@ -362,6 +363,19 @@ app.delete("/api/blogs/:id", authenticateToken, async (req, res) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+async function startServer() {
+    try {
+        await mongoose.connect(mongoUri);
+        console.log("MongoDB connected successfully!");
+
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error("MongoDB connection failed. Check MONGODB_URI and the Atlas database user password.");
+        console.error(error.message);
+        process.exitCode = 1;
+    }
+}
+
+startServer();
