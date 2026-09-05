@@ -1,3 +1,4 @@
+const API_BASE_URL = "http://localhost:5000/api";
 function showSuccessPopup(message, redirectUrl) {
     const existingPopup = document.querySelector(".success-popup");
     if (existingPopup) {
@@ -51,7 +52,7 @@ function displayStoredSuccessPopup() {
     showSuccessPopup(message, redirectUrl || "");
 }
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = "https://blog-application-backend-t77d.onrender.com/api";
 
 function escapeHtml(value) {
     return String(value).replace(/[&<>'"]/g, character => ({
