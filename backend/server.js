@@ -55,7 +55,10 @@ if (!mongoUri || mongoUri.includes("<db_password>")) {
     throw new Error("Set the real MongoDB password in backend/.env as MONGODB_URI.");
 }
 
-app.use(cors());
+app.use(cors({
+    origin: true,
+    credentials: true
+}));
 app.use(express.json());
 
 mongoose.connect(mongoUri)
